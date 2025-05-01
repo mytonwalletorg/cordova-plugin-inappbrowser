@@ -169,7 +169,7 @@ public class InAppBrowser extends CordovaPlugin {
     private RelativeLayout toolbar;
     private GradientDrawable actionButtonContainerBackground;
     private boolean showLocationBar = true;
-    private boolean showZoomControls = true;
+    private boolean showZoomControls = false;
     private boolean openWindowHidden = false;
     private boolean clearAllCache = false;
     private boolean clearSessionCache = false;
@@ -700,7 +700,7 @@ public class InAppBrowser extends CordovaPlugin {
         this.preloadCode = preloadCode;
         // Determine if we should hide the location bar.
         showLocationBar = true;
-        showZoomControls = true;
+        showZoomControls = false;
         openWindowHidden = false;
         mediaPlaybackRequiresUserGesture = false;
 
