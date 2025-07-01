@@ -37,6 +37,8 @@ import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Parcelable;
 import android.provider.Browser;
 import android.content.res.Resources;
@@ -47,8 +49,10 @@ import android.net.http.SslError;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -827,7 +831,7 @@ public class InAppBrowser extends CordovaPlugin {
             private LinearLayout createTitleView() {
                 LinearLayout titleView = new LinearLayout(cordova.getContext());
                 RelativeLayout.LayoutParams titleLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-                titleLayoutParams.addRule(RelativeLayout.CENTER_VERTICAL);
+                titleLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
                 titleView.setLayoutParams(titleLayoutParams);
                 titleView.setOrientation(LinearLayout.VERTICAL);
                 titleView.setId(Integer.valueOf(4));
@@ -835,12 +839,20 @@ public class InAppBrowser extends CordovaPlugin {
                 titleTextView.setGravity(Gravity.CENTER_HORIZONTAL);
                 titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
                 titleTextView.setTypeface(null, Typeface.BOLD);
+                titleTextView.setSingleLine();
+                titleTextView.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+                titleTextView.setHorizontalFadingEdgeEnabled(true);
+                titleTextView.setSelected(true);
                 titleTextView.setText(title);
                 titleView.addView(titleTextView);
                 subtitleTextView = new TextView(cordova.getActivity());
                 subtitleTextView.setGravity(Gravity.CENTER_HORIZONTAL);
                 subtitleTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
                 subtitleTextView.setTypeface(null, Typeface.BOLD);
+                subtitleTextView.setSingleLine();
+                subtitleTextView.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+                subtitleTextView.setHorizontalFadingEdgeEnabled(true);
+                subtitleTextView.setSelected(true);
                 subtitleTextView.setText(subtitle);
                 subtitleTextView.setVisibility(subtitle.isEmpty() ? View.GONE : View.VISIBLE);
                 titleView.addView(subtitleTextView);
@@ -1195,6 +1207,12 @@ public class InAppBrowser extends CordovaPlugin {
                     dialog.hide();
                     onBackPressedCallback.setEnabled(false);
                 }
+
+                main.post(() -> {
+                  ViewGroup.MarginLayoutParams titleLayoutParams = (ViewGroup.MarginLayoutParams) titleView.getLayoutParams();
+                  int horizontalMargin = Math.max(backView.getMeasuredWidth(), actionButtonContainer.getMeasuredWidth());
+                  titleLayoutParams.width = titleView.getMeasuredWidth() - 2 * horizontalMargin;
+                });
             }
         };
         this.cordova.getActivity().runOnUiThread(runnable);
@@ -1344,6 +1362,8 @@ public class InAppBrowser extends CordovaPlugin {
                 if (textView.getVisibility() != View.VISIBLE)
                     textView.setVisibility(View.VISIBLE);
                 textView.setText(newText);
+                textView.setSelected(false);
+                (new Handler(Looper.getMainLooper())).postDelayed(() -> textView.setSelected(true), 1000);
                 ObjectAnimator fadeIn = ObjectAnimator.ofFloat(textView, "alpha", 0f, 1f).setDuration(300);
                 fadeIn.start();
             }
