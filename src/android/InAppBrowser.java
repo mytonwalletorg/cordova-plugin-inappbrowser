@@ -945,7 +945,7 @@ public class InAppBrowser extends CordovaPlugin {
                 return close;
             }
 
-            @SuppressLint("NewApi")
+            @SuppressLint({"NewApi", "ClickableViewAccessibility"})
             public void run() {
 
                 // CB-6702 InAppBrowser hangs when opening more than one instance
@@ -962,6 +962,7 @@ public class InAppBrowser extends CordovaPlugin {
 
                 // Toolbar layout
                 toolbar = new RelativeLayout(cordova.getActivity());
+                toolbar.setOnTouchListener((v, event) -> true);
                 toolbar.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(TOOLBAR_HEIGHT)));
                 toolbar.setPadding(this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2));
                 if (leftToRight) {
