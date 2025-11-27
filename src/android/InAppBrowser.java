@@ -1547,11 +1547,22 @@ public class InAppBrowser extends CordovaPlugin {
             }
             else if (url.startsWith("https://my.tt/") ||
                      url.startsWith("https://go.mytonwallet.org")) {
-              Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-              try {
-                cordova.getContext().startActivity(intent);
-                override = true;
-              } catch (Exception e) {}
+                Uri originalUri = Uri.parse(url);
+                Uri.Builder builder = new Uri.Builder()
+                        .scheme("mtw")
+                        .authority("")
+                        .path(originalUri.getPath());
+                for (String name : originalUri.getQueryParameterNames()) {
+                    for (String value : originalUri.getQueryParameters(name)) {
+                        builder.appendQueryParameter(name, value);
+                    }
+                }
+                Uri mtwUri = builder.build();
+                Intent intent = new Intent(Intent.ACTION_VIEW, mtwUri);
+                try {
+                    cordova.getContext().startActivity(intent);
+                    override = true;
+                } catch (Exception e) {}
             }
 
             if (useBeforeload) {
