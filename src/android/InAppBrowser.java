@@ -1480,7 +1480,7 @@ public class InAppBrowser extends CordovaPlugin {
                 } catch (android.content.ActivityNotFoundException e) {
                     LOG.e(LOG_TAG, "Error dialing " + url + ": " + e.toString());
                 }
-            } else if (url.startsWith("geo:") || url.startsWith(WebView.SCHEME_MAILTO) || url.startsWith("market:") || url.startsWith("intent:") || url.startsWith("tg:")) {
+            } else if (url.startsWith("geo:") || url.startsWith(WebView.SCHEME_MAILTO) || url.startsWith("market:") || url.startsWith("intent:") || url.startsWith("tg:") || url.startsWith("mtw:")) {
                 try {
                     Intent intent = new Intent(Intent.ACTION_VIEW);
                     intent.setData(Uri.parse(url));
@@ -1544,6 +1544,14 @@ public class InAppBrowser extends CordovaPlugin {
                         }
                     }
                 }
+            }
+            else if (url.startsWith("https://my.tt/") ||
+                     url.startsWith("https://go.mytonwallet.org")) {
+              Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+              try {
+                cordova.getContext().startActivity(intent);
+                override = true;
+              } catch (Exception e) {}
             }
 
             if (useBeforeload) {
