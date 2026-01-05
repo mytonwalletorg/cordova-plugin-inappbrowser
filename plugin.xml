@@ -54,6 +54,7 @@
         <resource-file src="src/android/res/drawable/ic_action_close.xml" target="res/drawable/ic_action_close.xml" />
         <resource-file src="src/android/res/drawable/ic_action_more.xml" target="res/drawable/ic_action_more.xml" />
         <resource-file src="src/android/res/drawable/ic_action_previous_item.xml" target="res/drawable/ic_action_previous_item.xml" />
+        <resource-file src="src/android/res/drawable/ic_arrow_bottom_8.xml" target="res/drawable/ic_arrow_bottom_8.xml" />
 
     </platform>
 
