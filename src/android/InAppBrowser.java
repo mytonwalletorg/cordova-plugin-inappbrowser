@@ -205,7 +205,6 @@ public class InAppBrowser extends CordovaPlugin {
     private InAppBrowserClient currentClient;
     private String preloadCode = "";
     private List<Pair<String, String>> urlMenu = null;
-    private int selectedUrl = -1;
     private String backButtonCaption = "";
     private String reloadCaption = "";
     private String openInBrowserCaption = "";
@@ -736,7 +735,6 @@ public class InAppBrowser extends CordovaPlugin {
     public String showWebPage(final String url, HashMap<String, String> features, String preloadCode, List<Pair<String, String>> urlMenu) {
         this.preloadCode = preloadCode;
         this.urlMenu = urlMenu;
-        this.selectedUrl = 0;
         // Determine if we should hide the location bar.
         showLocationBar = true;
         showZoomControls = false;
@@ -818,7 +816,7 @@ public class InAppBrowser extends CordovaPlugin {
                     subtitle = "";
                 }
             } else {
-                subtitle = urlMenu.get(selectedUrl).first + " ";
+                subtitle = urlMenu.get(0).first + " ";
             }
             if (features.get(THEME) != null) {
                 theme = features.get(THEME);
