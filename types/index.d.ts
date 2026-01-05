@@ -21,8 +21,14 @@ interface InAppBrowser {
      * @param  options Options for the InAppBrowser. Optional, defaulting to: location=yes.
      *                 The options string must not contain any blank space, and each feature's
      *                 name/value pairs must be separated by a comma. Feature names are case insensitive.
+     * @param  menu    Optional list of URL entries to display as a subtitle menu.
+     *                 When provided, the subtitle becomes clickable and allows the user
+     *                 to switch between the specified URLs.
+     *                 Each entry must contain:
+     *                 - `key`:   The label displayed in the menu.
+     *                 - `value`: The URL to load when selected.
      */
-    open(url: string, target?: string, options?: string): InAppBrowser;
+    open(url: string, target?: string, options?: string, menu?: {key: string, value: string}[]): InAppBrowser;
 
     onloadstart(type: Event): void;
     onloadstop(type: InAppBrowserEvent): void;

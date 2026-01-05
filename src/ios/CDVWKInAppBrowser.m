@@ -85,6 +85,7 @@ static CDVWKInAppBrowser* instance = nil;
     NSString* target = [command argumentAtIndex:1 withDefault:kInAppBrowserTargetSelf];
     NSString* options = [command argumentAtIndex:2 withDefault:@"" andClass:[NSString class]];
     NSString* preloadCode = [command argumentAtIndex:3 withDefault:@"" andClass:[NSString class]];
+    NSString* menu = [command argumentAtIndex:4 withDefault:nil andClass:[NSArray class]];
 
     self.callbackId = command.callbackId;
 
@@ -101,7 +102,7 @@ static CDVWKInAppBrowser* instance = nil;
         } else if ([target isEqualToString:kInAppBrowserTargetSystem]) {
             [self openInSystem:absoluteUrl];
         } else { // _blank or anything else
-            [self openInInAppBrowser:absoluteUrl withOptions:options preloadCode: preloadCode];
+            [self openInInAppBrowser:absoluteUrl withOptions:options preloadCode: preloadCode menu: menu];
         }
 
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
@@ -113,9 +114,10 @@ static CDVWKInAppBrowser* instance = nil;
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (void)openInInAppBrowser:(NSURL*)url withOptions:(NSString*)options preloadCode:(NSString *)preloadCode
+- (void)openInInAppBrowser:(NSURL*)url withOptions:(NSString*)options preloadCode:(NSString *)preloadCode menu:(NSArray *)menu
 {
     CDVInAppBrowserOptions* browserOptions = [CDVInAppBrowserOptions parseOptions:options];
+    NSArray<CDVInAppBrowserUrlMenuItem *>* menuItems = [CDVInAppBrowserUrlMenuItem parseMenu:menu];
 
     WKWebsiteDataStore* dataStore = [WKWebsiteDataStore defaultDataStore];
     if (browserOptions.cleardata) {
@@ -152,7 +154,10 @@ static CDVWKInAppBrowser* instance = nil;
     }
 
     if (self.inAppBrowserViewController == nil) {
-        self.inAppBrowserViewController = [[CDVWKInAppBrowserViewController alloc] initWithBrowserOptions: browserOptions andSettings:self.commandDelegate.settings];
+        self.inAppBrowserViewController = [[CDVWKInAppBrowserViewController alloc] initWithBrowserOptions: browserOptions
+                                                                                                menuItems: menuItems
+                                                                                              preloadCode: preloadCode
+                                                                                              andSettings: self.commandDelegate.settings];
         self.inAppBrowserViewController.navigationDelegate = self;
 
         if ([self.viewController conformsToProtocol:@protocol(CDVScreenOrientationDelegate)]) {
@@ -205,7 +210,7 @@ static CDVWKInAppBrowser* instance = nil;
     }
     _waitForBeforeload = ![_beforeload isEqualToString:@""];
 
-    [self.inAppBrowserViewController navigateTo:url preloadCode:preloadCode];
+    [self.inAppBrowserViewController navigateTo:url];
     if (!browserOptions.hidden) {
         [self show:nil withNoAnimate:browserOptions.hidden];
     }
@@ -363,7 +368,7 @@ static CDVWKInAppBrowser* instance = nil;
     NSURL* url = [NSURL URLWithString:urlStr];
     //_beforeload = @"";
     _waitForBeforeload = NO;
-    [self.inAppBrowserViewController navigateTo:url preloadCode:@""];
+    [self.inAppBrowserViewController navigateTo:url];
 }
 
 // This is a helper method for the inject{Script|Style}{Code|File} API calls, which
@@ -678,11 +683,16 @@ static CDVWKInAppBrowser* instance = nil;
 
 BOOL isExiting = FALSE;
 
-- (id)initWithBrowserOptions: (CDVInAppBrowserOptions*) browserOptions andSettings:(NSDictionary *)settings
+- (id)initWithBrowserOptions: (CDVInAppBrowserOptions*) browserOptions
+                   menuItems: (NSArray<CDVInAppBrowserUrlMenuItem *>*) menuItems
+                 preloadCode: (NSString*) preloadCode
+                 andSettings:(NSDictionary *)settings
 {
     self = [super init];
     if (self != nil) {
         _browserOptions = browserOptions;
+        _menuItems = menuItems;
+        _preloadCode = preloadCode;
         _settings = settings;
         self.webViewUIDelegate = [[CDVWKInAppBrowserUIDelegate alloc] initWithTitle:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"]];
         [self.webViewUIDelegate setViewController:self];
@@ -701,6 +711,36 @@ BOOL isExiting = FALSE;
 {
     // We create the views in code for primarily for ease of upgrades and not requiring an external .xib to be included
 
+    [self setupWebView];
+
+    self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+    self.spinner.alpha = 1.000;
+    self.spinner.autoresizesSubviews = YES;
+    self.spinner.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleRightMargin);
+    self.spinner.clearsContextBeforeDrawing = NO;
+    self.spinner.clipsToBounds = NO;
+    self.spinner.contentMode = UIViewContentModeScaleToFill;
+    self.spinner.frame = CGRectMake(CGRectGetMidX(self.webView.frame), CGRectGetMidY(self.webView.frame), 20.0, 20.0);
+    self.spinner.hidden = NO;
+    self.spinner.hidesWhenStopped = YES;
+    self.spinner.multipleTouchEnabled = NO;
+    self.spinner.opaque = NO;
+    self.spinner.userInteractionEnabled = NO;
+    [self.spinner stopAnimating];
+
+
+    [self configureHeader];
+
+    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    [self.view addSubview:self.spinner];
+}
+
+- (void)setupWebView {
+    if (_webView != nil) {
+        [self setCurrentURL: nil];
+        [_webView removeFromSuperview];
+    }
+
     CGRect webViewBounds = self.view.bounds;
     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
 
@@ -715,11 +755,11 @@ BOOL isExiting = FALSE;
     }
     configuration.applicationNameForUserAgent = userAgent;
     configuration.userContentController = userContentController;
-#if __has_include(<Cordova/CDVWebViewProcessPoolFactory.h>)
+    #if __has_include(<Cordova/CDVWebViewProcessPoolFactory.h>)
     configuration.processPool = [[CDVWebViewProcessPoolFactory sharedFactory] sharedProcessPool];
-#elif __has_include("CDVWKProcessPoolFactory.h")
+    #elif __has_include("CDVWKProcessPoolFactory.h")
     configuration.processPool = [[CDVWKProcessPoolFactory sharedFactory] sharedProcessPool];
-#endif
+    #endif
     [configuration.userContentController addScriptMessageHandler:self name:IAB_BRIDGE_NAME];
 
     //WKWebView options
@@ -740,25 +780,23 @@ BOOL isExiting = FALSE;
         }
 
     }
-
-
     self.webView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration];
     self.webView.translatesAutoresizingMaskIntoConstraints = false;
-    [self.webView addObserver:self forKeyPath:@"title" options:NSKeyValueObservingOptionNew context:nil];;
+    [self.webView addObserver:self forKeyPath:@"title" options:NSKeyValueObservingOptionNew context:nil];
 
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 160400
+    #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 160400
     // With the introduction of iOS 16.4 the webview is no longer inspectable by default.
     // We'll honor that change for release builds, but will still allow inspection on debug builds by default.
     // We also introduce an override option, so consumers can influence this decision in their own build.
     if (@available(iOS 16.4, *)) {
-#ifdef DEBUG
+    #ifdef DEBUG
         BOOL allowWebviewInspectionDefault = YES;
-#else
+    #else
         BOOL allowWebviewInspectionDefault = NO;
-#endif
+    #endif
         self.webView.inspectable = [_settings cordovaBoolSettingForKey:@"InspectableWebview" defaultValue:allowWebviewInspectionDefault];
     }
-#endif
+    #endif
 
     [self.webView addObserver:self forKeyPath:@"canGoBack" options:NSKeyValueObservingOptionNew context:nil];
 
@@ -791,27 +829,27 @@ BOOL isExiting = FALSE;
     self.webView.allowsBackForwardNavigationGestures = NO;
 
     [self.webView.scrollView setContentInsetAdjustmentBehavior:UIScrollViewContentInsetAdjustmentNever];
+}
 
-    self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
-    self.spinner.alpha = 1.000;
-    self.spinner.autoresizesSubviews = YES;
-    self.spinner.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleRightMargin);
-    self.spinner.clearsContextBeforeDrawing = NO;
-    self.spinner.clipsToBounds = NO;
-    self.spinner.contentMode = UIViewContentModeScaleToFill;
-    self.spinner.frame = CGRectMake(CGRectGetMidX(self.webView.frame), CGRectGetMidY(self.webView.frame), 20.0, 20.0);
-    self.spinner.hidden = NO;
-    self.spinner.hidesWhenStopped = YES;
-    self.spinner.multipleTouchEnabled = NO;
-    self.spinner.opaque = NO;
-    self.spinner.userInteractionEnabled = NO;
-    [self.spinner stopAnimating];
+- (NSAttributedString *) attributedTextWithMenuItem:(NSString *)title {
+    NSTextAttachment *spacerAttachment = [[NSTextAttachment alloc] init];
+    spacerAttachment.bounds = CGRectMake(0, 0, 4, 1);
+    NSAttributedString *spacerString = [NSAttributedString attributedStringWithAttachment:spacerAttachment];
 
+    NSTextAttachment *arrowAttachment = [[NSTextAttachment alloc] init];
+    UIImage *arrowImage = [UIImage systemImageNamed:@"chevron.down"];
+    UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:11
+                                                                                         weight:UIImageSymbolWeightRegular];
+    arrowImage = [arrowImage imageByApplyingSymbolConfiguration:config];
+    arrowImage = [arrowImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    arrowAttachment.image = arrowImage;
+    NSAttributedString *arrowString = [NSAttributedString attributedStringWithAttachment:arrowAttachment];
 
-    [self configureHeader];
+    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:title];
+    [text appendAttributedString:spacerString];
+    [text appendAttributedString:arrowString];
 
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
-    [self.view addSubview:self.spinner];
+    return text;
 }
 
 - (void) configureHeader
@@ -839,15 +877,41 @@ BOOL isExiting = FALSE;
         [titleView addArrangedSubview:_titleLabel];
     }
 
-    if (_browserOptions.subtitle) {
-        _subtitleLabel = [[UILabel alloc] init];
-        _subtitleLabel.translatesAutoresizingMaskIntoConstraints = false;
-        _subtitleLabel.text = _browserOptions.subtitle;
-        _subtitleLabel.textAlignment = NSTextAlignmentCenter;
-        _subtitleLabel.font = [UIFont systemFontOfSize:13];
-        _subtitleLabel.textColor = [UIColor secondaryLabelColor];
-        _subtitleLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        [titleView addArrangedSubview:_subtitleLabel];
+    bool hasMenuItems = (_menuItems != nil && [_menuItems count] > 0);
+    if (_browserOptions.subtitle || hasMenuItems) {
+        _subtitleButton = [[UIButton alloc] init];
+        _subtitleButton.translatesAutoresizingMaskIntoConstraints = false;
+        [_subtitleButton setTitleColor:[UIColor secondaryLabelColor] forState:UIControlStateNormal];
+        _subtitleButton.font = [UIFont systemFontOfSize:13];
+        _subtitleButton.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        if (hasMenuItems) {
+            [_subtitleButton setAttributedTitle:[self attributedTextWithMenuItem: _menuItems[0].key] forState:UIControlStateNormal];
+            NSMutableArray<UIMenuElement *> *actions = [NSMutableArray array];
+
+            __weak typeof(self) weakSelf = self;
+            for (CDVInAppBrowserUrlMenuItem *item in _menuItems) {
+                UIAction *action = [UIAction actionWithTitle:item.key
+                                                       image:nil
+                                                  identifier:nil
+                                                     handler:^(__kindof UIAction * _Nonnull uiAction) {
+                    typeof(self) strongSelf = weakSelf;
+                    if (!strongSelf)
+                        return;
+                    [strongSelf.subtitleButton setAttributedTitle:[strongSelf attributedTextWithMenuItem: item.key] forState:UIControlStateNormal];
+                    [strongSelf setupWebView];
+                    [strongSelf navigateTo: [NSURL URLWithString: item.value]];
+                    [strongSelf updateNavigationButtons];
+                }];
+                [actions addObject:action];
+            }
+
+            UIMenu *menu = [UIMenu menuWithTitle:@"" children:actions];
+            _subtitleButton.showsMenuAsPrimaryAction = YES;
+            _subtitleButton.menu = menu;
+        } else {
+            [_subtitleButton setTitle:_browserOptions.subtitle forState:UIControlStateNormal];
+        }
+        [titleView addArrangedSubview:_subtitleButton];
     }
 
     // Create actions for the menu items
@@ -994,10 +1058,10 @@ BOOL isExiting = FALSE;
     });
 }
 
-- (void)navigateTo:(NSURL*)url preloadCode:(NSString *)preloadCode
+- (void)navigateTo:(NSURL*)url
 {
     // inject the preload script into the webview
-    WKUserScript *script = [[WKUserScript alloc] initWithSource:preloadCode
+    WKUserScript *script = [[WKUserScript alloc] initWithSource:_preloadCode
                                                   injectionTime:WKUserScriptInjectionTimeAtDocumentStart
                                                forMainFrameOnly:YES];
     [_webView.configuration.userContentController addUserScript:script];
@@ -1057,10 +1121,10 @@ BOOL isExiting = FALSE;
     }
 
     if ([keyPath isEqualToString:@"title"]) {
-        if (!_loadedOnce && _subtitleLabel.text.length == 0) {
+        if (!_loadedOnce && _subtitleButton.titleLabel.text.length == 0) {
             _loadedOnce = YES;
             NSString *newTitle = _webView.title ?: @"";
-            [self fadeLabel:_subtitleLabel toText:_titleLabel.text];
+            [_subtitleButton setTitle:_titleLabel.text forState:UIControlStateNormal];
             [self fadeLabel:_titleLabel toText:newTitle];
         }
         return;
@@ -1069,7 +1133,7 @@ BOOL isExiting = FALSE;
     [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
 }
 
-- (void)fadeLabel:(UILabel *)label toText:(NSString *)newText {
+- (void)fadeLabel:(UILabel *)label toText:(NSAttributedString *)newText {
     [UIView animateWithDuration:0.3 animations:^{
         label.alpha = 0.0;
     } completion:^(BOOL finished) {
