@@ -888,8 +888,8 @@ public class InAppBrowser extends CordovaPlugin {
                         arrowDrawable.setBounds(0, padding, arrowDrawable.getIntrinsicWidth(), arrowDrawable.getIntrinsicHeight() + padding);
                     }
                     subtitleTextView.setCompoundDrawables(null, null, arrowDrawable, null);
+                    subtitleTextView.setOnClickListener(v -> showUrlMenu());
                 }
-                subtitleTextView.setOnClickListener(v -> showUrlMenu());
                 titleView.addView(subtitleTextView);
                 LinearLayout.LayoutParams lp =
                     new LinearLayout.LayoutParams(
