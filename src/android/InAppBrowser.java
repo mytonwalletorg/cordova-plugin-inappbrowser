@@ -526,6 +526,8 @@ public class InAppBrowser extends CordovaPlugin {
     }
 
     private List<Pair<String, String>> parseMenu(JSONArray array) {
+        if (array == null)
+            return null;
         List<Pair<String, String>> pairs = new ArrayList<>();
         for (int i = 0; i < array.length(); i++) {
             JSONObject obj = array.optJSONObject(i);
