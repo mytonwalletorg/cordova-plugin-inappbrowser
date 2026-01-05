@@ -22,6 +22,7 @@
 #import <Cordova/CDVScreenOrientationDelegate.h>
 #import "CDVWKInAppBrowserUIDelegate.h"
 #import "CDVInAppBrowserOptions.h"
+#import "CDVInAppBrowserUrlMenuItem.h"
 #import "CDVInAppBrowserNavigationController.h"
 
 @class CDVWKInAppBrowserViewController;
@@ -53,6 +54,10 @@
 @interface CDVWKInAppBrowserViewController : UIViewController <CDVScreenOrientationDelegate,WKNavigationDelegate,WKUIDelegate,WKScriptMessageHandler,UIAdaptivePresentationControllerDelegate,UISheetPresentationControllerDelegate>{
     @private
     CDVInAppBrowserOptions *_browserOptions;
+    @private
+    NSArray<CDVInAppBrowserUrlMenuItem *> *_menuItems;
+    @private
+    NSString *_preloadCode;
     NSDictionary *_settings;
 }
 
@@ -63,7 +68,7 @@
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* optionsButton;
 @property (nonatomic, strong) IBOutlet UIActivityIndicatorView* spinner;
 @property (nonatomic, strong) IBOutlet UILabel* titleLabel;
-@property (nonatomic, strong) IBOutlet UILabel* subtitleLabel;
+@property (nonatomic, strong) IBOutlet UIButton* subtitleButton;
 @property (nonatomic, strong) IBOutlet CDVWKInAppBrowserUIDelegate* webViewUIDelegate;
 
 @property (nonatomic, weak) id <CDVScreenOrientationDelegate> orientationDelegate;
@@ -72,9 +77,12 @@
 @property (nonatomic) BOOL loadedOnce;
 
 - (void)forceClose;
-- (void)navigateTo:(NSURL*)url preloadCode:(NSString *)preloadCode;
+- (void)navigateTo:(NSURL*)url;
 - (void)updateNavigationButtons;
 
-- (id)initWithBrowserOptions: (CDVInAppBrowserOptions*) browserOptions andSettings:(NSDictionary*) settings;
+- (id)initWithBrowserOptions: (CDVInAppBrowserOptions*) browserOptions
+                   menuItems: (NSArray<CDVInAppBrowserUrlMenuItem *>*) menuItems
+                 preloadCode: (NSString*) preloadCode
+                 andSettings:(NSDictionary*) settings;
 
 @end
