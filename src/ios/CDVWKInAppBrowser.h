@@ -67,7 +67,7 @@
 @property (nonatomic, strong) IBOutlet UIButton* closeInnerButton;
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* optionsButton;
 @property (nonatomic, strong) IBOutlet UIActivityIndicatorView* spinner;
-@property (nonatomic, strong) IBOutlet UILabel* titleLabel;
+@property (nonatomic, strong) IBOutlet UIButton* titleButton;
 @property (nonatomic, strong) IBOutlet UIButton* subtitleButton;
 @property (nonatomic, strong) IBOutlet CDVWKInAppBrowserUIDelegate* webViewUIDelegate;
 

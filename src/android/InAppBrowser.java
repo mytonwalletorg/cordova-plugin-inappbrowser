@@ -212,6 +212,7 @@ public class InAppBrowser extends CordovaPlugin {
     private String shareCaption = "";
     private Boolean animated = true;
     private Boolean loadedOnce = false;
+    private Boolean shouldClearHistory = false;
     private Drawable arrowDrawable;
 
     @Override
@@ -698,6 +699,8 @@ public class InAppBrowser extends CordovaPlugin {
             this.inAppWebView.loadUrl(url);
         }
         this.inAppWebView.requestFocus();
+        this.inAppWebView.clearHistory();
+        shouldClearHistory = true;
     }
 
 
@@ -724,6 +727,10 @@ public class InAppBrowser extends CordovaPlugin {
             dipValue,
             cordova.getActivity().getResources().getDisplayMetrics()
         );
+    }
+
+    private boolean hasUrlMenu() {
+        return urlMenu != null && !urlMenu.isEmpty();
     }
 
     /**
@@ -804,19 +811,19 @@ public class InAppBrowser extends CordovaPlugin {
             if (features.get(BEFORELOAD) != null) {
                 beforeload = features.get(BEFORELOAD);
             }
-            if (features.get(TITLE) != null) {
-                title = features.get(TITLE);
+            if (hasUrlMenu()) {
+                title = urlMenu.get(0).first;
             } else {
-                title = "";
-            }
-            if (urlMenu == null || urlMenu.isEmpty()) {
-                if (features.get(SUBTITLE) != null) {
-                    subtitle = features.get(SUBTITLE);
+                if (features.get(TITLE) != null) {
+                    title = features.get(TITLE);
                 } else {
-                    subtitle = "";
+                    title = "";
                 }
+            }
+            if (features.get(SUBTITLE) != null) {
+                subtitle = features.get(SUBTITLE);
             } else {
-                subtitle = urlMenu.get(0).first + " ";
+                subtitle = "";
             }
             if (features.get(THEME) != null) {
                 theme = features.get(THEME);
@@ -869,8 +876,23 @@ public class InAppBrowser extends CordovaPlugin {
                 titleTextView.setEllipsize(TextUtils.TruncateAt.MARQUEE);
                 titleTextView.setHorizontalFadingEdgeEnabled(true);
                 titleTextView.setSelected(true);
-                titleTextView.setText(title);
+                titleTextView.setText(title + (hasUrlMenu() ? " " : ""));
+                if (hasUrlMenu()) {
+                    arrowDrawable = ContextCompat.getDrawable(cordova.getContext(), R.drawable.ic_arrow_bottom_8);
+                    if (arrowDrawable != null) {
+                        int padding = dpToPixels(1.66f);
+                        arrowDrawable.setBounds(0, padding, arrowDrawable.getIntrinsicWidth(), arrowDrawable.getIntrinsicHeight() + padding);
+                    }
+                    titleTextView.setCompoundDrawables(null, null, arrowDrawable, null);
+                    titleTextView.setOnClickListener(v -> showUrlMenu());
+                }
                 titleView.addView(titleTextView);
+                LinearLayout.LayoutParams lp =
+                    new LinearLayout.LayoutParams(
+                        LayoutParams.WRAP_CONTENT,
+                        LayoutParams.WRAP_CONTENT
+                    );
+                titleTextView.setLayoutParams(lp);
                 subtitleTextView = new TextView(cordova.getActivity());
                 subtitleTextView.setGravity(Gravity.CENTER);
                 subtitleTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
@@ -880,23 +902,8 @@ public class InAppBrowser extends CordovaPlugin {
                 subtitleTextView.setHorizontalFadingEdgeEnabled(true);
                 subtitleTextView.setSelected(true);
                 subtitleTextView.setText(subtitle);
-                subtitleTextView.setVisibility(subtitle.isEmpty() ? View.GONE : View.VISIBLE);
-                if (urlMenu != null && !urlMenu.isEmpty()) {
-                    arrowDrawable = ContextCompat.getDrawable(cordova.getContext(), R.drawable.ic_arrow_bottom_8);
-                    if (arrowDrawable != null) {
-                        int padding = dpToPixels(1.66f);
-                        arrowDrawable.setBounds(0, padding, arrowDrawable.getIntrinsicWidth(), arrowDrawable.getIntrinsicHeight() + padding);
-                    }
-                    subtitleTextView.setCompoundDrawables(null, null, arrowDrawable, null);
-                    subtitleTextView.setOnClickListener(v -> showUrlMenu());
-                }
+                subtitleTextView.setVisibility(subtitle.isEmpty() || hasUrlMenu() ? View.GONE : View.VISIBLE);
                 titleView.addView(subtitleTextView);
-                LinearLayout.LayoutParams lp =
-                    new LinearLayout.LayoutParams(
-                        LayoutParams.WRAP_CONTENT,
-                        LayoutParams.WRAP_CONTENT
-                    );
-                subtitleTextView.setLayoutParams(lp);
                 return titleView;
             }
 
@@ -1081,7 +1088,7 @@ public class InAppBrowser extends CordovaPlugin {
                     public void onReceivedTitle(WebView view, String title) {
                         super.onReceivedTitle(view, title);
 
-                        if (!loadedOnce && subtitleTextView.getVisibility() == View.GONE) {
+                        if (!hasUrlMenu() && !loadedOnce && subtitleTextView.getVisibility() == View.GONE) {
                             loadedOnce = true;
                             fadeTextView(titleTextView, view.getTitle());
                             fadeTextView(subtitleTextView, titleTextView.getText().toString());
@@ -1281,9 +1288,9 @@ public class InAppBrowser extends CordovaPlugin {
         int secondaryColor = isDark ? Color.WHITE : parseColor("#FF8399AE");
         int actionsColor = parseColor(isDark ? "#8799B3" : "#8399AE");
         titleTextView.setTextColor(color);
-        subtitleTextView.setTextColor(secondaryColor);
         if (arrowDrawable != null)
-            arrowDrawable.setTint(secondaryColor);
+            arrowDrawable.setTint(color);
+        subtitleTextView.setTextColor(secondaryColor);
         main.setBackgroundColor(backgroundColor);
         closeButton.setColorFilter(actionsColor);
         actionsSeparatorView.setBackgroundColor(actionsColor);
@@ -1449,14 +1456,14 @@ public class InAppBrowser extends CordovaPlugin {
 
         ListPopupWindow popup = new ListPopupWindow(context);
         popup.setAdapter(adapter);
-        popup.setAnchorView(subtitleTextView);
+        popup.setAnchorView(titleTextView);
         popup.setModal(true);
 
         int popupWidth = measurePopupWidth(adapter, context);
         popup.setContentWidth(popupWidth);
 
-        subtitleTextView.post(() -> {
-            int anchorWidth = subtitleTextView.getWidth();
+        titleTextView.post(() -> {
+            int anchorWidth = titleTextView.getWidth();
             popup.setHorizontalOffset((anchorWidth - popupWidth) / 2);
             popup.setVerticalOffset(dpToPixels(8));
             popup.show();
@@ -1464,7 +1471,7 @@ public class InAppBrowser extends CordovaPlugin {
 
         popup.setOnItemClickListener((parent, view, position, id) -> {
             Pair<String, String> entry = urlMenu.get(position);
-            fadeTextView(subtitleTextView, entry.first + " ");
+            fadeTextView(titleTextView, entry.first + " ");
             inAppWebView.loadUrl("about:blank");
             inAppWebView.post(() -> navigate(entry.second));
             popup.dismiss();
@@ -1558,8 +1565,8 @@ public class InAppBrowser extends CordovaPlugin {
             if (beforeload.equals("yes") && method == null) {
                 useBeforeload = true;
             } else if (beforeload.equals("yes")
-                    //TODO handle POST requests then this condition can be removed:
-                    && !method.equals("POST")) {
+                //TODO handle POST requests then this condition can be removed:
+                && !method.equals("POST")) {
                 useBeforeload = true;
             } else if (beforeload.equals("get") && (method == null || method.equals("GET"))) {
                 useBeforeload = true;
@@ -1766,6 +1773,11 @@ public class InAppBrowser extends CordovaPlugin {
             // https://issues.apache.org/jira/browse/CB-11248
             view.clearFocus();
             view.requestFocus();
+
+            if (shouldClearHistory) {
+                view.clearHistory();
+                shouldClearHistory = false;
+            }
 
             try {
                 JSONObject obj = new JSONObject();

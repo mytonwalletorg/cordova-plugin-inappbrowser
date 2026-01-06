@@ -838,8 +838,8 @@ BOOL isExiting = FALSE;
 
     NSTextAttachment *arrowAttachment = [[NSTextAttachment alloc] init];
     UIImage *arrowImage = [UIImage systemImageNamed:@"chevron.down"];
-    UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:11
-                                                                                         weight:UIImageSymbolWeightRegular];
+    UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:13
+                                                                                         weight:UIImageSymbolWeightBold];
     arrowImage = [arrowImage imageByApplyingSymbolConfiguration:config];
     arrowImage = [arrowImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
     arrowAttachment.image = arrowImage;
@@ -866,26 +866,13 @@ BOOL isExiting = FALSE;
     UIStackView *titleView = [[UIStackView alloc] init];
     titleView.translatesAutoresizingMaskIntoConstraints = false;
     titleView.axis = UILayoutConstraintAxisVertical;
-
-    if (_browserOptions.title) {
-        _titleLabel = [[UILabel alloc] init];
-        _titleLabel.text = _browserOptions.title;
-        _titleLabel.textAlignment = NSTextAlignmentCenter;
-        _titleLabel.font = [UIFont boldSystemFontOfSize:17];
-        _titleLabel.textColor = [UIColor labelColor];
-        _titleLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        [titleView addArrangedSubview:_titleLabel];
-    }
+    titleView.spacing = -12;
 
     bool hasMenuItems = (_menuItems != nil && [_menuItems count] > 0);
-    if (_browserOptions.subtitle || hasMenuItems) {
-        _subtitleButton = [[UIButton alloc] init];
-        _subtitleButton.translatesAutoresizingMaskIntoConstraints = false;
-        [_subtitleButton setTitleColor:[UIColor secondaryLabelColor] forState:UIControlStateNormal];
-        _subtitleButton.font = [UIFont systemFontOfSize:13];
-        _subtitleButton.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    if (_browserOptions.title || hasMenuItems) {
+        _titleButton = [[UIButton alloc] init];
         if (hasMenuItems) {
-            [_subtitleButton setAttributedTitle:[self attributedTextWithMenuItem: _menuItems[0].key] forState:UIControlStateNormal];
+            [_titleButton setAttributedTitle:[self attributedTextWithMenuItem: _menuItems[0].key] forState:UIControlStateNormal];
             NSMutableArray<UIMenuElement *> *actions = [NSMutableArray array];
 
             __weak typeof(self) weakSelf = self;
@@ -897,7 +884,7 @@ BOOL isExiting = FALSE;
                     typeof(self) strongSelf = weakSelf;
                     if (!strongSelf)
                         return;
-                    [strongSelf.subtitleButton setAttributedTitle:[strongSelf attributedTextWithMenuItem: item.key] forState:UIControlStateNormal];
+                    [strongSelf.titleButton setAttributedTitle:[strongSelf attributedTextWithMenuItem: item.key] forState:UIControlStateNormal];
                     [strongSelf setupWebView];
                     [strongSelf navigateTo: [NSURL URLWithString: item.value]];
                     [strongSelf updateNavigationButtons];
@@ -906,11 +893,24 @@ BOOL isExiting = FALSE;
             }
 
             UIMenu *menu = [UIMenu menuWithTitle:@"" children:actions];
-            _subtitleButton.showsMenuAsPrimaryAction = YES;
-            _subtitleButton.menu = menu;
+            _titleButton.showsMenuAsPrimaryAction = YES;
+            _titleButton.menu = menu;
         } else {
-            [_subtitleButton setTitle:_browserOptions.subtitle forState:UIControlStateNormal];
+            [_titleButton setTitle:_browserOptions.title forState:UIControlStateNormal];
         }
+        _titleButton.font = [UIFont boldSystemFontOfSize:17];
+        [_titleButton setTitleColor:[UIColor labelColor] forState:UIControlStateNormal];
+        _titleButton.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        [titleView addArrangedSubview:_titleButton];
+    }
+
+    if (_browserOptions.subtitle && !hasMenuItems) {
+        _subtitleButton = [[UIButton alloc] init];
+        _subtitleButton.translatesAutoresizingMaskIntoConstraints = false;
+        [_subtitleButton setTitleColor:[UIColor secondaryLabelColor] forState:UIControlStateNormal];
+        _subtitleButton.font = [UIFont systemFontOfSize:13];
+        _subtitleButton.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        [_subtitleButton setTitle:_browserOptions.subtitle forState:UIControlStateNormal];
         [titleView addArrangedSubview:_subtitleButton];
     }
 
@@ -1124,27 +1124,13 @@ BOOL isExiting = FALSE;
         if (!_loadedOnce && _subtitleButton.titleLabel.text.length == 0) {
             _loadedOnce = YES;
             NSString *newTitle = _webView.title ?: @"";
-            [_subtitleButton setTitle:_titleLabel.text forState:UIControlStateNormal];
-            [self fadeLabel:_titleLabel toText:newTitle];
+            [_subtitleButton setTitle:_titleButton.titleLabel.text forState:UIControlStateNormal];
+            [_titleButton setTitle: newTitle forState:UIControlStateNormal];
         }
         return;
     }
 
     [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
-}
-
-- (void)fadeLabel:(UILabel *)label toText:(NSAttributedString *)newText {
-    [UIView animateWithDuration:0.3 animations:^{
-        label.alpha = 0.0;
-    } completion:^(BOOL finished) {
-        if (finished) {
-            [label setText:newText];
-
-            [UIView animateWithDuration:0.3 animations:^{
-                label.alpha = 1.0;
-            }];
-        }
-    }];
 }
 
 #pragma mark - UISheetPresentationControllerDelegate
