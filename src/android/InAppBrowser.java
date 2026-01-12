@@ -1474,8 +1474,30 @@ public class InAppBrowser extends CordovaPlugin {
             fadeTextView(titleTextView, entry.first + " ");
             inAppWebView.loadUrl("about:blank");
             inAppWebView.post(() -> navigate(entry.second));
+            onMenuItemSelectedCallback(entry);
             popup.dismiss();
         });
+    }
+
+    private void onMenuItemSelectedCallback(Pair<String, String> entry) {
+          try {
+                JSONObject event = new JSONObject();
+                event.put("type", "menuitemselected");
+
+                JSONObject payload = new JSONObject();
+                payload.put("key", entry.first);
+                payload.put("value", entry.second);
+
+                event.put("payload", payload);
+
+                PluginResult pr = new PluginResult(PluginResult.Status.OK, event);
+                pr.setKeepCallback(true);
+                callbackContext.sendPluginResult(pr);
+          } catch (JSONException e) {
+                callbackContext.sendPluginResult(
+                    new PluginResult(PluginResult.Status.JSON_EXCEPTION)
+                );
+          }
     }
 
     private void fadeTextView(final TextView textView, final CharSequence newText) {

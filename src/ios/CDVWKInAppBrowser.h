@@ -48,6 +48,7 @@
 - (void)show:(CDVInvokedUrlCommand*)command;
 - (void)hide:(CDVInvokedUrlCommand*)command;
 - (void)loadAfterBeforeload:(CDVInvokedUrlCommand*)command;
+- (void)onMenuItemSelected:(CDVInAppBrowserUrlMenuItem *)item;
 
 @end
 

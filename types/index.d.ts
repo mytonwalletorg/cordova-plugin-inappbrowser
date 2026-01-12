@@ -34,6 +34,7 @@ interface InAppBrowser {
     onloadstop(type: InAppBrowserEvent): void;
     onloaderror(type: InAppBrowserEvent): void;
     onexit(type: InAppBrowserEvent): void;
+    onmenuitemselect(type: string): void;
     // addEventListener overloads
     /**
      * Adds a listener for an event from the InAppBrowser.

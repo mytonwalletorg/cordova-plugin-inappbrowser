@@ -673,6 +673,26 @@ static CDVWKInAppBrowser* instance = nil;
     self.inAppBrowserNav = nil;
 }
 
+- (void)onMenuItemSelected:(CDVInAppBrowserUrlMenuItem *)item
+{
+    NSDictionary *payload = @{
+        @"key": item.key,
+        @"value": item.value
+    };
+
+    NSDictionary *event = @{
+        @"type": @"menuitemselected",
+        @"payload": payload
+    };
+
+    CDVPluginResult *result =
+        [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                     messageAsDictionary:event];
+
+    [result setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:result callbackId:self.callbackId];
+}
+
 @end //CDVWKInAppBrowser
 
 #pragma mark CDVWKInAppBrowserViewController
@@ -888,6 +908,8 @@ BOOL isExiting = FALSE;
                     [strongSelf setupWebView];
                     [strongSelf navigateTo: [NSURL URLWithString: item.value]];
                     [strongSelf updateNavigationButtons];
+                    [strongSelf.navigationDelegate onMenuItemSelected: item];
+
                 }];
                 [actions addObject:action];
             }

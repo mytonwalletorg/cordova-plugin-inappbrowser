@@ -35,7 +35,8 @@
             customscheme: channel.create('customscheme'),
             message: channel.create('message'),
             download: channel.create('download'),
-            hidecompletion: channel.create('hidecompletion')
+            hidecompletion: channel.create('hidecompletion'),
+            menuitemselected: channel.create('menuitemselected')
         };
     }
 
