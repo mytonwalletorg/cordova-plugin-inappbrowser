@@ -878,7 +878,7 @@ BOOL isExiting = FALSE;
     self.closeInnerButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.closeInnerButton addTarget:self action:@selector(close) forControlEvents:UIControlEventTouchUpInside];
     [self.closeInnerButton setFont: [UIFont systemFontOfSize: 17]];
-    self.closeInnerButton.tintColor = [UIColor labelColor];
+    self.closeInnerButton.tintColor = @available(iOS 26.0, *) ? [UIColor labelColor] : [UIColor tintColor];
     self.closeBarButton = [[UIBarButtonItem alloc] initWithCustomView:_closeInnerButton];
     self.closeBarButton.enabled = YES;
 
@@ -987,8 +987,11 @@ BOOL isExiting = FALSE;
     // Create the options button with the actions menu
     UIMenu *menu = [UIMenu menuWithTitle:@"" children:@[reloadAction, openInSafariAction, copyAction, shareAction]];
     if (@available(iOS 14.0, *)) {
-        self.optionsButton = [[UIBarButtonItem alloc] initWithImage: [UIImage systemImageNamed:@"ellipsis.circle"] menu:menu];
-        self.optionsButton.tintColor = [UIColor labelColor];
+        BOOL isIOS26 = @available(iOS 26.0, *);
+        self.optionsButton = [[UIBarButtonItem alloc]
+            initWithImage:[UIImage systemImageNamed:isIOS26 ? @"ellipsis" : @"ellipsis.circle"]
+                    menu:menu];
+        self.optionsButton.tintColor = isIOS26 ? [UIColor labelColor] : [UIColor tintColor];
     }
     self.navigationItem.titleView = titleView;
     [self setNavigationItems];
@@ -1122,12 +1125,17 @@ BOOL isExiting = FALSE;
 - (void) updateNavigationButtons
 {
     self.closeBarButton = nil;
+    BOOL isIOS26 = @available(iOS 26.0, *);
     if (_webView.canGoBack) {
         [self.closeInnerButton setImage:[UIImage systemImageNamed:@"chevron.left"] forState:UIControlStateNormal];
-        [self.closeInnerButton setTitle:_browserOptions.backbuttoncaption forState:UIControlStateNormal];
+        [self.closeInnerButton setTitle:isIOS26 ? @"" : _browserOptions.backbuttoncaption forState:UIControlStateNormal];
     } else {
-        [self.closeInnerButton setImage:nil forState:UIControlStateNormal];
-        [self.closeInnerButton setTitle:_browserOptions.closebuttoncaption forState:UIControlStateNormal];
+        if (isIOS26) {
+          [self.closeInnerButton setImage:[UIImage systemImageNamed:@"xmark"] forState:UIControlStateNormal];
+        } else {
+          [self.closeInnerButton setImage:nil forState:UIControlStateNormal];
+          [self.closeInnerButton setTitle:_browserOptions.closebuttoncaption forState:UIControlStateNormal];
+        }
     }
     self.closeBarButton = [[UIBarButtonItem alloc] initWithCustomView:_closeInnerButton];
     [self setNavigationItems];
