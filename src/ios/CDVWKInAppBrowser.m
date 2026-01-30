@@ -289,7 +289,11 @@ static CDVWKInAppBrowser* instance = nil;
         if (weakSelf.inAppBrowserNav != nil) {
             UIViewController *topVC = [self topViewController];
             if (topVC != self.inAppBrowserViewController) { // ignore multiple show calls from js side
-                [topVC presentViewController:self.inAppBrowserNav animated:!noAnimate completion:nil];
+                [topVC presentViewController:self.inAppBrowserNav animated:!noAnimate completion:^{
+                    if (@available(iOS 15.0, *)) {
+                        weakSelf.inAppBrowserNav.sheetPresentationController.containerView.overrideUserInterfaceStyle = weakSelf.inAppBrowserViewController.overrideUserInterfaceStyle;
+                    }
+                }];
             }
         }
     });
