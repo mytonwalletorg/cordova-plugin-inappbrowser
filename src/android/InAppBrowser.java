@@ -149,7 +149,6 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String TITLE = "title";
     private static final String SUBTITLE = "subtitle";
     private static final String THEME = "theme";
-    private static final String SHARE_URL = "shareurl";
     private static final String BACK_BUTTON_CAPTION = "backbuttoncaption";
     private static final String RELOAD_CAPTION = "reloadcaption";
     private static final String OPEN_IN_BROWSER_CAPTION = "openinbrowsercaption";
@@ -164,7 +163,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final int MENU_SHARE = 104;
 
 
-    private static final List<String> customizableOptions = Arrays.asList(TOOLBAR_COLOR, FOOTER_COLOR, TITLE, SUBTITLE, THEME, SHARE_URL, BACK_BUTTON_CAPTION, RELOAD_CAPTION, OPEN_IN_BROWSER_CAPTION, COPY_URL_CAPTION, SHARE_CAPTION, ANIMATED);
+    private static final List<String> customizableOptions = Arrays.asList(TOOLBAR_COLOR, FOOTER_COLOR, TITLE, SUBTITLE, THEME, BACK_BUTTON_CAPTION, RELOAD_CAPTION, OPEN_IN_BROWSER_CAPTION, COPY_URL_CAPTION, SHARE_CAPTION, ANIMATED);
 
     private OnBackPressedCallback onBackPressedCallback;
     private InAppBrowserDialog dialog;
@@ -199,7 +198,6 @@ public class InAppBrowser extends CordovaPlugin {
     private String title = "";
     private String subtitle = "";
     private String theme = "";
-    private String shareUrl = "";
     private boolean fullscreen = true;
     private String[] allowedSchemes;
     private InAppBrowserClient currentClient;
@@ -828,13 +826,6 @@ public class InAppBrowser extends CordovaPlugin {
             if (features.get(THEME) != null) {
                 theme = features.get(THEME);
             }
-            if (features.get(SHARE_URL) != null) {
-                try {
-                    shareUrl = URLDecoder.decode(features.get(SHARE_URL), "UTF-8");
-                } catch (UnsupportedEncodingException e) {
-                    shareUrl = url;
-                }
-            }
             if (features.get(BACK_BUTTON_CAPTION) != null) {
                 backButtonCaption = features.get(BACK_BUTTON_CAPTION);
             }
@@ -924,27 +915,32 @@ public class InAppBrowser extends CordovaPlugin {
                     popup.getMenu().add(0, MENU_RELOAD, 0, reloadCaption);
                     popup.getMenu().add(0, MENU_BROWSER, 1, openInBrowserCaption);
                     popup.getMenu().add(0, MENU_COPY, 2, copyUrlCaption);
-                    popup.getMenu().add(0, MENU_SHARE, 2, shareCaption);
+                    popup.getMenu().add(0, MENU_SHARE, 3, shareCaption);
                     popup.setOnMenuItemClickListener(item -> {
                         int itemId = item.getItemId();
+                        String activeUrl = inAppWebView != null && inAppWebView.getUrl() != null ? inAppWebView.getUrl() : null;
                         switch (itemId) {
                             case MENU_RELOAD:
                                 inAppWebView.reload();
                                 return true;
                             case MENU_BROWSER:
+                                if (activeUrl == null)
+                                    return true;
                                 Intent intent = new Intent(Intent.ACTION_VIEW);
-                                intent.setData(Uri.parse(shareUrl));
+                                intent.setData(Uri.parse(activeUrl));
                                 cordova.getActivity().startActivity(intent);
                                 return true;
                             case MENU_COPY:
+                                if (activeUrl == null)
+                                    return true;
                                 ClipboardManager clipboard = (android.content.ClipboardManager) cordova.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-                                ClipData clip = android.content.ClipData.newPlainText(copyUrlCaption, shareUrl);
+                                ClipData clip = android.content.ClipData.newPlainText(copyUrlCaption, activeUrl);
                                 clipboard.setPrimaryClip(clip);
                                 return true;
                             case MENU_SHARE:
                                 Intent shareIntent = new Intent(Intent.ACTION_SEND);
                                 shareIntent.setType("text/plain");
-                                shareIntent.putExtra(Intent.EXTRA_TEXT, shareUrl);
+                                shareIntent.putExtra(Intent.EXTRA_TEXT, activeUrl);
                                 cordova.getActivity().startActivity(Intent.createChooser(shareIntent, shareCaption));
                                 return true;
                         }

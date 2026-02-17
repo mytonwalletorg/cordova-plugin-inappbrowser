@@ -958,11 +958,11 @@ BOOL isExiting = FALSE;
         typeof(self) strongSelf = weakSelf;
         if (!strongSelf)
             return;
-        NSURL *shareUrl = [NSURL URLWithString: [strongSelf->_browserOptions.shareurl stringByRemovingPercentEncoding]];
-        if (!shareUrl)
+        NSURL *activeUrl = strongSelf.webView.URL ?: strongSelf.currentURL;
+        if (!activeUrl)
             return;
-        if ([[UIApplication sharedApplication] canOpenURL:shareUrl]) {
-            [[UIApplication sharedApplication] openURL:shareUrl options:@{} completionHandler:nil];
+        if ([[UIApplication sharedApplication] canOpenURL:activeUrl]) {
+            [[UIApplication sharedApplication] openURL:activeUrl options:@{} completionHandler:nil];
         }
     }];
     UIAction *copyAction = [UIAction actionWithTitle:_browserOptions.copyurlcaption
@@ -972,7 +972,10 @@ BOOL isExiting = FALSE;
         typeof(self) strongSelf = weakSelf;
         if (!strongSelf)
             return;
-        [UIPasteboard generalPasteboard].string = [strongSelf->_browserOptions.shareurl stringByRemovingPercentEncoding];
+        NSURL *activeUrl = strongSelf.webView.URL ?: strongSelf.currentURL;
+        if (activeUrl) {
+            [UIPasteboard generalPasteboard].string = [activeUrl absoluteString];
+        }
     }];
     UIAction *shareAction = [UIAction actionWithTitle:_browserOptions.sharecaption
                                                      image:[UIImage systemImageNamed:@"square.and.arrow.up"]
@@ -981,10 +984,10 @@ BOOL isExiting = FALSE;
         typeof(self) strongSelf = weakSelf;
         if (!strongSelf)
             return;
-        NSURL *shareUrl = [NSURL URLWithString: [strongSelf->_browserOptions.shareurl stringByRemovingPercentEncoding]];
-        if (!shareUrl)
+        NSURL *activeUrl = strongSelf.webView.URL ?: strongSelf.currentURL;
+        if (!activeUrl)
             return;
-        UIActivityViewController *activityViewController = [[UIActivityViewController alloc] initWithActivityItems:@[shareUrl] applicationActivities:nil];
+        UIActivityViewController *activityViewController = [[UIActivityViewController alloc] initWithActivityItems:@[activeUrl] applicationActivities:nil];
         activityViewController.excludedActivityTypes = @[UIActivityTypeAssignToContact, UIActivityTypePrint];
         [strongSelf presentViewController:activityViewController animated:YES completion:nil];
     }];
